@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Onboarding | Clarity</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            background-color: var(--surface-color); /* White background for fullscreen onboarding */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            padding: 32px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .step-counter {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .onboard-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 600px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 40px 24px;
+        }
+
+        /* Step transitions */
+        .step {
+            display: none;
+        }
+        .step.active {
+            display: block;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        /* Structure for the question titles matching screenshot */
+        .step h1 {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            color: #111827;
+        }
+        .step > p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+
+        /* Commitment rows */
+        .commitment-row {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        .commitment-row .col-name { flex: 2; }
+        .commitment-row .col-time { flex: 1; }
+        .remove-btn {
+            background: none; border: none; font-size: 1.25rem; color: var(--text-light);
+            cursor: pointer; margin-top: 32px;
+        }
+
+        .bottom-actions {
+            margin-top: auto; /* push to bottom */
+            padding-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-btn {
+            background: none; border: none; color: var(--text-main); font-weight: 600;
+            font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="topbar">
+        <div class="logo">
+            <svg class="logo-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+            </svg>
+            Clarity
+        </div>
+        <div class="step-counter" id="stepIndicator">1 of 4</div>
+    </div>
+
+    <div id="auth-container" class="onboard-container" style="max-width: 400px; display: flex; justify-content: center;">
+        <div style="width: 100%;">
+            <div style="text-align: center; margin-bottom: 32px;">
+                <h1 style="font-size: 2rem; color: #111827; margin-bottom: 8px;">Welcome Back</h1>
+                <p style="color: var(--text-muted);">Log in to continue or create a new account.</p>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label class="input-label">Username</label>
+                <input type="text" id="auth-username" class="input-field" placeholder="Enter username">
+            </div>
+            <div style="margin-bottom: 24px;">
+                <label class="input-label">Password</label>
+                <input type="password" id="auth-password" class="input-field" placeholder="Enter password">
+            </div>
+            
+            <div style="display: flex; gap: 16px;">
+                <button class="btn btn-outline" style="flex: 1;" onclick="submitAuth('register')">Register</button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="submitAuth('login')">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="onboard-container" id="onboarding-flow" style="display: none;">
+        
+        <!-- STEP 1: Sleep Schedule -->
+        <div class="step active" id="step1">
+            <h1>What are your typical sleeping hours?</h1>
+            <p>We'll use this to ensure we don't schedule tasks when you should be resting.</p>
+            
+            <div style="display: flex; gap: 24px; margin-top: 24px;">
+                <div style="flex: 1;">
+                    <label class="input-label">Wake up time</label>
+                    <input type="time" id="wake" class="input-field" value="07:00">
+                </div>
+                <div style="flex: 1;">
+                    <label class="input-label">Sleep time</label>
+                    <input type="time" id="sleep" class="input-field" value="23:00">
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: Fixed Commitments (mimicking the screenshot exactly) -->
+        <div class="step" id="step2">
+            <h1>What fixed commitments do you have today?</h1>
+            <p>Classes, coaching, part-time work — anything that's locked in.</p>
+
+            <!-- Headers for the columns -->
+            <div style="display: flex; gap: 16px; margin-bottom: 8px;">
+                <div style="flex: 2; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Commitment</div>
+                <div style="flex: 1; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">From</div>
+                <div style="flex: 1; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">To</div>
+                <div style="width: 24px;"></div>
+            </div>
+
+            <div id="commitments-container">
+                <div class="commitment-row" id="row-0">
+                    <div class="col-name">
+                        <input type="text" class="input-field commit-name" placeholder="e.g., College">
+                    </div>
+                    <div class="col-time">
+                        <input type="time" class="input-field commit-from">
+                    </div>
+                    <div class="col-time">
+                        <input type="time" class="input-field commit-to">
+                    </div>
+                    <button class="remove-btn" onclick="removeRow('row-0')">&times;</button>
+                </div>
+            </div>
+
+            <button class="btn btn-dashed" onclick="addCommitmentRow()" style="margin-top: 16px; border-radius: 8px; font-weight: 600;">
+                + Add another commitment
+            </button>
+        </div>
+
+        <!-- STEP 3: Free Time Slots -->
+        <div class="step" id="step3">
+            <h1>When are you free to study?</h1>
+            <p>We will ONLY schedule your tasks during these time blocks today.</p>
+            
+            <div id="freeslots-container">
+                <div class="freeslot-row" style="display: flex; gap: 16px; margin-bottom: 16px;" id="free-row-0">
+                    <div style="flex: 1;">
+                        <label class="input-label">Free From</label>
+                        <input type="time" class="input-field free-from" value="16:00">
+                    </div>
+                    <div style="flex: 1;">
+                        <label class="input-label">Free Until</label>
+                        <input type="time" class="input-field free-to" value="20:00">
+                    </div>
+                    <button class="remove-btn" onclick="removeFreeRow('free-row-0')">&times;</button>
+                </div>
+            </div>
+            
+            <button class="btn btn-dashed" onclick="addFreeRow()" style="margin-top: 8px; border-radius: 8px; font-weight: 600;">
+                + Add another free slot
+            </button>
+        </div>
+
+        <!-- STEP 4: Realistic Hours -->
+        <div class="step" id="step4">
+            <h1>Let's be realistic.</h1>
+            <p>How many hours can you actually study with full focus today without burning out?</p>
+            
+            <div>
+                <input type="number" id="studyHours" class="input-field" placeholder="e.g., 4" style="font-size: 2rem; padding: 20px; text-align: center;" min="1" max="12">
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="bottom-actions">
+            <button class="back-btn" onclick="prevStep()" id="btnBack" style="visibility: hidden;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Back
+            </button>
+            <button class="btn btn-primary" onclick="nextStep()" id="btnNext" style="padding: 12px 32px; font-size: 1.05rem; border-radius: 8px;">
+                Continue
+            </button>
+        </div>
+    </div>
+
+    <!-- We will use a dedicated script.js locally to handle the state logic -->
+    <script src="/static/script.js"></script>
+</body>
+</html>

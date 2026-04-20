@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Clarity</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .layout { display: flex; min-height: 100vh; background-color: var(--bg-color); }
+        
+        /* Sidebar exactly matching photo */
+        .sidebar {
+            width: 250px;
+            background-color: var(--surface-color);
+            border-right: 1px solid var(--border-color);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar .logo {
+            font-size: 1.25rem;
+            color: #1F2937;
+            margin-bottom: 40px;
+            padding-left: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: var(--radius-sm);
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-bottom: 4px;
+        }
+        
+        .nav-item:hover { color: var(--text-main); }
+        .nav-item.active {
+            background-color: var(--surface-color);
+            color: var(--text-main);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05); /* Match photo slight elevation on Active tab */
+            border: 1px solid var(--border-color);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; animation: fadeIn 0.3s ease-out; }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .page-header h1 { font-size: 1.75rem; margin-bottom: 8px; }
+
+        /* Specific matching for Academic Calendar UI */
+        .upload-card {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            background: var(--surface-color);
+            max-width: 800px;
+        }
+
+        .upload-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+        }
+        
+        .upload-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .upload-tab {
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .upload-tab.active { background-color: var(--primary-color); color: white; }
+        .upload-tab.inactive { background-color: #F3F4F6; color: var(--text-muted); }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .upload-dropzone {
+            border: 1px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+        .upload-dropzone:hover { border-color: var(--primary-color); background-color: var(--primary-light); }
+        .upload-dropzone input[type="file"] {
+            opacity: 0; position: absolute; top:0; left:0; width:100%; height:100%; cursor: pointer;
+        }
+        .upload-dropzone-icon {
+            font-size: 24px; color: var(--text-muted); margin-bottom: 12px; display: block;
+        }
+
+        /* Task Cards */
+        .task-card {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+            background: var(--surface-color); margin-bottom: 12px;
+        }
+        .task-card.completed { opacity: 0.7; }
+        
+        .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+        
+        /* ===== FULL-SCREEN DAILY SETUP OVERLAY ===== */
+        #daily-setup-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(17, 24, 39, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 50000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: overlayFadeIn 0.4s ease-out forwards;
+        }
+        #daily-setup-overlay.active { display: flex; }
+
+        @keyframes overlayFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes overlayCardIn {
+            from { opacity: 0; transform: translateY(40px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .overlay-progress-bar {
+            position: absolute;
+            top: 0; left: 0; width: 100%;
+            height: 5px;
+            background: rgba(255,255,255,0.1);
+            z-index: 2;
+        }
+        .overlay-progress-bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), #61A5C2);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .overlay-card {
+            position: relative;
+            width: 95vw; max-width: 680px;
+            max-height: 90vh;
+            overflow-y: auto;
+            background: white;
+            border-radius: 20px;
+            padding: 48px 48px 36px;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+            animation: overlayCardIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .overlay-card .step { display: none; opacity: 0; transform: translateX(20px); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .overlay-card .step.active { display: block; opacity: 1; transform: translateX(0); animation: slideInSmooth 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes slideInSmooth {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .overlay-card .step h1 { font-size: 2.2rem; margin-bottom: 12px; color: #111827; }
+        .overlay-card .step > p { font-size: 1.1rem; color: var(--text-muted); margin-bottom: 40px; }
+        .overlay-card .commitment-row { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+        .overlay-card .commitment-row .col-name { flex: 2; }
+        .overlay-card .commitment-row .col-time { flex: 1; }
+        .overlay-card .remove-btn { background: none; border: none; font-size: 1.25rem; color: var(--text-light); cursor: pointer; margin-top: 32px; }
+        .overlay-card .bottom-actions { margin-top: 40px; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); }
+        .overlay-card .back-btn { background: none; border: none; color: var(--text-main); font-weight: 600; font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+
+        .overlay-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .overlay-badge.first-time { background: #DCFCE7; color: #166534; }
+        .overlay-badge.edit-mode { background: #FEF3C7; color: #92400E; }
+
+        .overlay-close-btn {
+            position: absolute; top: 16px; right: 20px;
+            background: none; border: none; font-size: 1.5rem;
+            color: var(--text-muted); cursor: pointer; z-index: 3;
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            transition: var(--transition);
+        }
+        .overlay-close-btn:hover { background: #F3F4F6; color: #111827; }
+
+        /* In-page mini setup (hidden by default, used for quick edits from sidebar) */
+        .onboard-container {
+            display: flex; flex-direction: column; max-width: 650px;
+            margin: 0 auto; width: 100%; padding: 48px;
+            background: white; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color); overflow: hidden; position: relative;
+        }
+
+        #plan-setup-container {
+            max-width: 600px; margin: 0 auto;
+        }
+
+        /* ===== INLINE QUICK-EDIT PANEL ===== */
+        #quick-edit-panel {
+            display: none;
+            max-width: 800px;
+            margin-bottom: 24px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            animation: qeSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes qeSlideIn {
+            from { opacity: 0; transform: translateY(-12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .qe-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 50%, #F0F9FF 100%);
+            border-bottom: 1px solid #D1FAE5;
+        }
+        .qe-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            background: #059669;
+            color: white;
+            letter-spacing: 0.3px;
+        }
+        .qe-close {
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        .qe-close:hover { background: rgba(0,0,0,0.06); color: #111827; }
+        .qe-body { padding: 24px; }
+        .qe-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .qe-field label { font-size: 0.8rem; }
+        .qe-section {
+            padding: 16px 0;
+            border-top: 1px solid var(--border-color);
+        }
+        .qe-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .qe-row .input-field {
+            padding: 8px 10px;
+            font-size: 0.85rem;
+        }
+        .qe-row .qe-commit-name { flex: 2; }
+        .qe-row .qe-commit-from,
+        .qe-row .qe-commit-to,
+        .qe-row .qe-slot-from,
+        .qe-row .qe-slot-to { flex: 1; }
+        .qe-remove {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #EF4444;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: var(--transition);
+            opacity: 0.6;
+        }
+        .qe-remove:hover { opacity: 1; background: #FEE2E2; }
+        .qe-add-btn {
+            background: none;
+            border: 1px dashed var(--primary-color);
+            color: var(--primary-color);
+            padding: 4px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .qe-add-btn:hover { background: var(--primary-light); }
+        .qe-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-color);
+            margin-top: 4px;
+        }
+
+        /* ====== CALENDAR SEARCH BAR ====== */
+        .cal-search-container { max-width: 800px; }
+        .cal-search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .cal-search-icon {
+            position: absolute;
+            left: 16px;
+            color: var(--text-muted);
+            pointer-events: none;
+            transition: color 0.2s;
+        }
+        .cal-search-input {
+            width: 100%;
+            padding: 14px 44px 14px 48px;
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            color: var(--text-main);
+            background: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        }
+        .cal-search-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(137, 194, 217, 0.15), 0 4px 16px rgba(0,0,0,0.06);
+        }
+        .cal-search-input:focus + .cal-search-icon,
+        .cal-search-wrapper:focus-within .cal-search-icon {
+            color: var(--primary-color);
+        }
+        .cal-search-clear {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .cal-search-clear:hover { background: #F3F4F6; color: #EF4444; }
+        .cal-search-results {
+            margin-top: 12px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            max-height: 420px;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            animation: searchSlideIn 0.25s ease-out;
+        }
+        @keyframes searchSlideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .cal-search-result-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+            border-bottom: 1px solid #F3F4F6;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .cal-search-result-item:last-child { border-bottom: none; }
+        .cal-search-result-item:hover { background: #F9FAFB; }
+        .cal-search-result-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .cal-search-result-info { flex: 1; min-width: 0; }
+        .cal-search-result-title {
+            font-weight: 600; font-size: 0.92rem; color: #1F2937;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .cal-search-result-meta {
+            font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;
+            display: flex; gap: 12px; align-items: center;
+        }
+        .cal-search-no-results {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        .cal-search-highlight {
+            background: #FEF3C7;
+            padding: 1px 3px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        /* ====== AI CHAT TOGGLE BUTTON ====== */
+        .cal-chat-toggle-btn {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%) !important;
+            color: white !important;
+            border: none !important;
+            padding: 10px 20px !important;
+            font-weight: 600 !important;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .cal-chat-toggle-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(79, 70, 229, 0.4) !important;
+        }
+        .cal-chat-toggle-btn svg { stroke: white; }
+
+        /* ====== AI CHAT DRAWER ====== */
+        .cal-chat-drawer {
+            position: fixed;
+            top: 0; right: -480px;
+            width: 460px;
+            height: 100vh;
+            z-index: 20000;
+            transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .cal-chat-drawer.open { right: 0; }
+        .cal-chat-drawer-inner {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: white;
+            border-left: 1px solid var(--border-color);
+            box-shadow: -12px 0 40px rgba(0,0,0,0.1);
+        }
+        .cal-chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #9333EA 100%);
+            color: white;
+            flex-shrink: 0;
+        }
+        .cal-chat-header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .cal-chat-avatar {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .cal-chat-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin: 0;
+            color: white;
+        }
+        .cal-chat-subtitle {
+            font-size: 0.78rem;
+            opacity: 0.8;
+            margin: 2px 0 0;
+            color: white !important;
+        }
+        .cal-chat-close {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+        .cal-chat-close:hover { background: rgba(255,255,255,0.3); }
+
+        /* Quick Actions */
+        .cal-chat-quick-actions {
+            padding: 16px 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            border-bottom: 1px solid #F3F4F6;
+            background: #FAFBFF;
+            flex-shrink: 0;
+        }
+        .cal-chat-chip {
+            padding: 6px 14px;
+            border: 1px solid #E5E7EB;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: #4B5563;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        .cal-chat-chip:hover {
+            border-color: #7C3AED;
+            color: #7C3AED;
+            background: #F5F3FF;
+            transform: translateY(-1px);
+        }
+
+        /* Messages */
+        .cal-chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .cal-chat-welcome {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+        .cal-chat-welcome-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            animation: welcomeBounce 2s ease-in-out infinite;
+        }
+        @keyframes welcomeBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .cal-chat-welcome h4 {
+            font-size: 1.1rem;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+        .cal-chat-welcome p {
+            font-size: 0.88rem;
+            line-height: 1.5;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+        .cal-chat-msg {
+            max-width: 88%;
+            animation: msgSlideIn 0.3s ease-out;
+        }
+        @keyframes msgSlideIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .cal-chat-msg.user {
+            align-self: flex-end;
+        }
+        .cal-chat-msg.ai {
+            align-self: flex-start;
+        }
+        .cal-chat-bubble {
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+        .cal-chat-msg.user .cal-chat-bubble {
+            background: linear-gradient(135deg, #4F46E5, #7C3AED);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .cal-chat-msg.ai .cal-chat-bubble {
+            background: #F3F4F6;
+            color: #1F2937;
+            border-bottom-left-radius: 4px;
+        }
+        .cal-chat-msg-time {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+        .cal-chat-msg.user .cal-chat-msg-time { text-align: right; }
+
+        /* Typing Indicator */
+        .cal-chat-typing {
+            display: flex;
+            gap: 5px;
+            padding: 14px 18px;
+            background: #F3F4F6;
+            border-radius: 16px;
+            border-bottom-left-radius: 4px;
+            width: fit-content;
+        }
+        .cal-chat-typing-dot {
+            width: 8px; height: 8px;
+            background: #9CA3AF;
+            border-radius: 50%;
+            animation: typingDot 1.4s ease-in-out infinite;
+        }
+        .cal-chat-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .cal-chat-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingDot {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+
+        /* Input Area */
+        .cal-chat-input-area {
+            padding: 16px 20px;
+            border-top: 1px solid #F3F4F6;
+            background: white;
+            flex-shrink: 0;
+        }
+        .cal-chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .cal-chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-family: inherit;
+            color: var(--text-main);
+            transition: border-color 0.2s;
+            background: #FAFBFF;
+        }
+        .cal-chat-input:focus {
+            outline: none;
+            border-color: #7C3AED;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+        .cal-chat-send-btn {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, #4F46E5, #7C3AED);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .cal-chat-send-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+        }
+        .cal-chat-send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Chat overlay backdrop */
+        .cal-chat-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.3);
+            z-index: 19999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .cal-chat-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="layout">
+        <!-- Sidebar Exact Match to Photo 2 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <svg class="logo-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                </svg>
+                Clarity
+            </div>
+
+            <div class="nav-item active" onclick="switchTab('plan')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+                Today's Plan
+            </div>
+            <div class="nav-item" onclick="switchTab('calendar')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                Calendar
+            </div>
+            <div class="nav-item" onclick="switchTab('hub')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                Study Hub
+            </div>
+            <div class="nav-item" onclick="switchTab('analytics')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                Analytics
+            </div>
+            <div class="nav-item" onclick="switchTab('reflection')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                Day Reflection
+            </div>
+            <div class="nav-item" onclick="logoutUser()" style="margin-top: auto;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                Logout
+            </div>
+        </aside>
+
+        <main class="main-content">
+            
+            <!-- Global Top Header -->
+            <header class="global-header">
+                <div class="header-left">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="color:var(--text-muted); cursor:pointer;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-outline" style="border-color: var(--primary-light); color: var(--primary-color);" onclick="openDailyPlan()">📋 Daily Setup</button>
+                    <button class="btn btn-primary" id="btn-gen-tt" onclick="generateTimetable()">Generate Smart Timetable</button>
+                    <div class="header-icon-btn" onclick="showNotificationDropdown()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        <span id="bell-badge" class="header-badge" style="display: none;">0</span>
+                    </div>
+                    <div class="header-icon-btn" onclick="showCalendarDropdown()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- PLAN TAB -->
+            <section id="view-plan" class="view-section active">
+                <!-- INLINE QUICK-EDIT PANEL (shown after daily setup is done for today) -->
+                <div id="quick-edit-panel"></div>
+
+                <!-- DASHBOARD FLOW (always visible now, setup is in overlay) -->
+                <div id="plan-dashboard-container">
+                    <div class="page-header" style="margin-bottom: 24px;">
+                        <div>
+                            <h1>Today's Plan</h1>
+                            <p>Your tasks and smart timetable.</p>
+                        </div>
+                    </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 32px;">
+                    <div>
+                        <h3>My Tasks</h3>
+                        <div id="tasks-list" style="margin-top: 16px;"></div>
+                        
+                        <div class="card" style="margin-top: 24px; padding: 24px;">
+                            <h4 style="margin-bottom: 16px;">+ Add New Task</h4>
+                            <form onsubmit="createAdvancedTask(event)">
+                                <div style="display: grid; gap: 16px;">
+                                    <div>
+                                        <label class="input-label">Task Name</label>
+                                        <input type="text" id="m-title" class="input-field" placeholder="e.g., Chapter 4 Physics" required>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                        <div>
+                                            <label class="input-label">Deadline</label>
+                                            <input type="date" id="m-dead" class="input-field" required>
+                                        </div>
+                                        <div>
+                                            <label class="input-label">Priority</label>
+                                            <select id="m-prio" class="input-field">
+                                                <option value="High">High</option>
+                                                <option value="Medium" selected>Medium</option>
+                                                <option value="Low">Low</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="input-label">Study Material (PDF or URL)</label>
+                                        <input type="file" id="m-file" class="input-field" accept=".pdf">
+                                        <input type="text" id="m-url" class="input-field" placeholder="Or paste YouTube / Web Document URL" style="margin-top: 8px;">
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="input-label">Time Estimation Mode</label>
+                                        <select id="m-mode" class="input-field" onchange="toggleTimeMode()">
+                                            <option value="manual">Manual Entry (mins)</option>
+                                            <option value="ai">AI Detection (analyzes uploaded material)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Manual Entry Field -->
+                                    <div id="div-manual">
+                                        <label class="input-label">Estimated Time (mins)</label>
+                                        <input type="number" id="m-est" class="input-field" placeholder="e.g., 60">
+                                    </div>
+                                    
+                                    <!-- AI Detection Fields -->
+                                    <div id="div-ai" style="display: none; padding: 16px; background: #F9FAFB; border-radius: 8px; border: 1px dashed var(--border-color);">
+                                        <button type="button" class="btn btn-outline btn-sm" onclick="analyzePDFForTime()" id="btn-analyze-pdf" style="margin-bottom: 12px; width: 100%;">Analyze Material (Get 3 Estimates)</button>
+                                        <label class="input-label" id="label-m-type" style="display:none;">Select Study Depth to Apply</label>
+                                        <select id="m-type" class="input-field" style="display:none;" onchange="updateAIPreview()">
+                                            <option value="reading">Reading</option>
+                                            <option value="understanding">Deep Understanding</option>
+                                            <option value="exam">Exam Prep / Memorizing</option>
+                                        </select>
+                                        <div id="ai-estimate-result" style="margin-top: 8px; font-weight: 500; font-size: 0.9rem; color: #111827;"></div>
+                                    </div>
+
+                                    <button type="submit" id="btn-submit-task" class="btn btn-primary" style="margin-top: 8px;">Save Task</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="padding:0; overflow:hidden;">
+                        <div style="padding:20px 24px; background:linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 100%); border-bottom:1px solid #E5E7EB; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <h3 style="margin:0; font-size:1.1rem; color:#1E40AF;">⚡ Smart Timetable</h3>
+                                <p style="margin:4px 0 0; font-size:0.8rem; color:#6B7280;">AI-optimized study schedule with breaks</p>
+                            </div>
+                            <button class="btn btn-primary" id="btn-gen-tt" onclick="generateTimetable()" style="padding:8px 20px; font-size:0.85rem; border-radius:10px;">
+                                ⚡ Generate Smart Timetable
+                            </button>
+                        </div>
+                        <div id="tt-display" style="padding:20px 24px; max-height:600px; overflow-y:auto; color:var(--text-muted); font-size:0.95rem;">
+                            <div style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+                                <div style="font-size:2rem; margin-bottom:12px;">📝</div>
+                                <p style="font-weight:600; margin-bottom:4px;">No timetable generated yet</p>
+                                <p style="font-size:0.85rem;">Add tasks and click generate to build your optimized study schedule!</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CALENDAR TAB -->
+            <section id="view-calendar" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>Academic Calendar</h1>
+                        <p>Upload your academic calendar and weekly timetable separately.</p>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button class="btn btn-outline cal-chat-toggle-btn" onclick="toggleCalendarChat()" id="cal-chat-toggle-btn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            Ask AI
+                        </button>
+                    </div>
+                </div>
+
+                <div class="upload-card">
+                    <div class="upload-card-header">
+                        <h3 style="font-size: 1.1rem; color: #111827;">Upload Academic Calendar</h3>
+                        <span style="color: var(--text-muted); cursor: pointer;" onclick="document.querySelector('.upload-card').style.display='none'">&times;</span>
+                    </div>
+                    
+                    <div class="upload-tabs">
+                        <div class="upload-tab active" id="tab-acad" onclick="switchCalTab('acad')">
+                            <span style="margin-right:6px;">📅</span> Academic Calendar
+                        </div>
+                        <div class="upload-tab inactive" id="tab-week" onclick="switchCalTab('week')">
+                            <span style="margin-right:6px;">⏱️</span> Weekly Timetable
+                        </div>
+                    </div>
+
+                    <!-- ACADEMIC CALENDAR UPLOAD PANEL -->
+                    <div id="panel-acad">
+                        <p style="margin-bottom: 24px; font-size: 0.95rem;">Upload your academic calendar with exam dates, holidays, and submission deadlines. AI will extract and add them.</p>
+
+                        <div class="upload-grid">
+                            <div class="upload-dropzone" id="btn-upload-cal">
+                                <input type="file" accept=".pdf" onchange="uploadAcademicCalendar(event)">
+                                <svg class="upload-dropzone-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                                <div style="font-weight: 600; color: #111827;">Upload PDF</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">Academic calendar PDF</div>
+                            </div>
+
+                            <div class="upload-dropzone" id="btn-upload-img">
+                                <input type="file" accept="image/png, image/jpeg, image/jpg" onchange="uploadAcademicCalendar(event)">
+                                <svg class="upload-dropzone-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                                <div style="font-weight: 600; color: #111827;">Upload Photo</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">Screenshot of calendar</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WEEKLY TIMETABLE PANEL -->
+                    <div id="panel-week" style="display: none;">
+                        <p style="margin-bottom: 16px; font-size: 0.95rem;">Set up your recurring weekly timetable. This will lock in your schedule on the calendar.</p>
+                        
+                        <div style="margin-bottom: 16px; padding: 16px; background: #F9FAFB; border: 1px dashed var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <h4 style="margin: 0; font-size: 0.95rem; color: #111827;">Auto-Extract from Document/Photo</h4>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">AI will extract your classes automatically.</span>
+                            </div>
+                            <div class="upload-dropzone" style="padding: 12px 24px; min-width: 180px; text-align: center; border: 1px dashed var(--primary-color); border-radius: 8px; cursor: pointer; position: relative;">
+                                <input type="file" accept=".pdf, image/png, image/jpeg, image/jpg" style="opacity: 0; position: absolute; top:0; left:0; width:100%; height:100%; cursor: pointer;" onchange="uploadWeeklyPDF(event)">
+                                <div style="font-weight: 600; color: var(--primary-color); font-size: 0.9rem;">Upload PDF / Photo</div>
+                            </div>
+                        </div>
+                        
+                        <div id="weekly-classes-container"></div>
+                        <button class="btn btn-outline btn-sm" onclick="addWeeklyClassForm()" style="margin-top: 12px;">+ Add Class</button>
+                        <button class="btn btn-primary btn-sm" onclick="saveWeeklyTimetable()" style="margin-top: 12px; margin-left: 8px;">Save Schedule</button>
+                    </div>
+                </div>
+
+                <!-- ========== SEARCH BAR ========== -->
+                <div class="cal-search-container" style="margin-top: 24px;">
+                    <div class="cal-search-wrapper">
+                        <svg class="cal-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="cal-search-input" class="cal-search-input" placeholder="Search events... (e.g., 'exam', 'holiday', 'March', 'deadline')" oninput="handleCalendarSearch(this.value)" autocomplete="off">
+                        <button id="cal-search-clear" class="cal-search-clear" onclick="clearCalendarSearch()" style="display:none;">&times;</button>
+                    </div>
+                    <div id="cal-search-results" class="cal-search-results" style="display:none;"></div>
+                </div>
+                
+                <!-- Visual Big Calendar -->
+                <div class="card" style="margin-top: 24px; padding: 32px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h3 style="color: #111827;" id="cal-month-title">Monthly View</h3>
+                        <div>
+                            <button class="btn btn-outline btn-sm" onclick="changeMonth(-1)">&larr; Prev</button>
+                            <button class="btn btn-outline btn-sm" onclick="changeMonth(1)">Next &rarr;</button>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div id="dynamic-calendar" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;">
+                        <!-- JS Will Populate -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========== AI CALENDAR CHAT DRAWER ========== -->
+            <div id="cal-chat-drawer" class="cal-chat-drawer">
+                <div class="cal-chat-drawer-inner">
+                    <!-- Header -->
+                    <div class="cal-chat-header">
+                        <div class="cal-chat-header-left">
+                            <div class="cal-chat-avatar">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="cal-chat-title">Clarity AI</h3>
+                                <p class="cal-chat-subtitle" id="cal-chat-status">Ask anything about your calendar</p>
+                            </div>
+                        </div>
+                        <button class="cal-chat-close" onclick="toggleCalendarChat()">&times;</button>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="cal-chat-quick-actions" id="cal-chat-quick-actions">
+                        <button class="cal-chat-chip" onclick="sendQuickQuestion('What are my upcoming exams?')">📝 Upcoming exams</button>
+                        <button class="cal-chat-chip" onclick="sendQuickQuestion('What events are happening this week?')">📅 This week</button>
+                        <button class="cal-chat-chip" onclick="sendQuickQuestion('List all holidays')">🎉 Holidays</button>
+                        <button class="cal-chat-chip" onclick="sendQuickQuestion('What deadlines do I have coming up?')">⚠️ Deadlines</button>
+                        <button class="cal-chat-chip" onclick="sendQuickQuestion('Give me a summary of my entire calendar')">📋 Full summary</button>
+                        <button class="cal-chat-chip" onclick="sendQuickQuestion('What is my schedule for today?')">🕐 Today</button>
+                    </div>
+
+                    <!-- Messages Area -->
+                    <div class="cal-chat-messages" id="cal-chat-messages">
+                        <div class="cal-chat-welcome">
+                            <div class="cal-chat-welcome-icon">🤖</div>
+                            <h4>Hi! I'm your Calendar AI</h4>
+                            <p>Upload a calendar PDF or photo, then ask me anything about your schedule — exams, deadlines, holidays, classes, and more!</p>
+                        </div>
+                    </div>
+
+                    <!-- Input -->
+                    <div class="cal-chat-input-area">
+                        <div class="cal-chat-input-wrapper">
+                            <input type="text" id="cal-chat-input" class="cal-chat-input" placeholder="Ask about your calendar..." onkeydown="if(event.key==='Enter') sendCalendarChat()" autocomplete="off">
+                            <button class="cal-chat-send-btn" onclick="sendCalendarChat()" id="cal-chat-send-btn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Event Modals & Toasts -->
+            <div id="event-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center;">
+                <div class="card" style="width: 400px; padding: 24px;">
+                    <h3 id="event-modal-title" style="margin-bottom: 16px;">Add/Edit Event</h3>
+                    <input type="hidden" id="event-modal-id">
+                    <div style="margin-bottom: 12px;">
+                        <label class="input-label">Start Date</label>
+                        <input type="date" id="event-modal-date" class="input-field">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label class="input-label">End Date</label>
+                        <input type="date" id="event-modal-end-date" class="input-field">
+                    </div>
+                    <div style="margin-bottom: 12px;">
+                        <label class="input-label">Event Title</label>
+                        <input type="text" id="event-modal-text" class="input-field" placeholder="E.g. Math Midterm">
+                    </div>
+                    <div style="margin-bottom: 16px;">
+                        <label class="input-label">Type</label>
+                        <select id="event-modal-type" class="input-field">
+                            <option value="event">General Event</option>
+                            <option value="exam">Exam</option>
+                            <option value="deadline">Deadline</option>
+                            <option value="holiday">Holiday</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <button class="btn btn-outline" id="btn-delete-event" style="color: red; border-color: red;" onclick="deleteEvent()">Delete</button>
+                        <div>
+                            <button class="btn btn-outline" style="margin-right: 8px;" onclick="closeEventModal()">Cancel</button>
+                            <button class="btn btn-primary" onclick="saveEvent()">Save</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="day-view-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; align-items: center; justify-content: center;">
+                <div class="card" style="width: 500px; padding: 24px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+                        <h3 id="day-modal-title">Day Schedule</h3>
+                        <div style="cursor:pointer;" onclick="closeDayViewModal()">&#10005;</div>
+                    </div>
+                    
+                    <button class="btn btn-outline btn-sm" style="margin-bottom:16px;" onclick="openEventModal(event, null, document.getElementById('day-modal-date-hidden').value)">+ Add Event to Day</button>
+                    <input type="hidden" id="day-modal-date-hidden">
+                    
+                    <div id="day-view-timeline" style="max-height: 400px; overflow-y: auto;">
+                        <!-- JS Will Populate -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Container -->
+            <div id="notification-container" style="position: fixed; top: 90px; right: 40px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+            
+            <!-- Calendar Dropdown -->
+            <div id="calendar-dropdown" style="display:none; position:fixed; top:90px; right:40px; z-index:9999; width:300px; background:white; border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); padding:16px;">
+                <h3 style="font-size: 1rem; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">Upcoming Deadlines</h3>
+                <div id="calendar-deadlines-list" style="max-height: 250px; overflow-y: auto;">
+                    <!-- JS populated -->
+                </div>
+            </div>
+            
+            <audio id="bell-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+            <!-- STUDY HUB TAB -->
+            <section id="view-hub" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>Study Hub</h1>
+                        <p style="color: var(--text-muted); font-size: 1.05rem;">All your uploaded PDFs and URL materials linked to tasks.</p>
+                    </div>
+                </div>
+                <div id="hub-list" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;">
+                    <!-- Will be populated by JS -->
+                </div>
+            </section>
+
+            <!-- ANALYTICS TAB -->
+            <section id="view-analytics" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>Analytics &amp; Insights</h1>
+                        <p style="color: var(--text-muted); font-size: 1.05rem;">Track your study habits and discover patterns.</p>
+                    </div>
+                </div>
+                
+                <!-- Stat Cards Row -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px;">
+                    <div class="card" style="padding: 20px 24px; border-left: 4px solid #6366F1;">
+                        <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Planned This Week</span>
+                        <div style="font-size: 2rem; font-weight: 700; color: #1F2937; margin-top: 8px;" id="stat-planned">0h</div>
+                    </div>
+                    <div class="card" style="padding: 20px 24px; border-left: 4px solid #059669;">
+                        <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Actual Study</span>
+                        <div style="font-size: 2rem; font-weight: 700; color: #059669; margin-top: 8px;" id="stat-actual">0h</div>
+                    </div>
+                    <div class="card" style="padding: 20px 24px; border-left: 4px solid #EF4444;">
+                        <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Time Gap</span>
+                        <div style="font-size: 2rem; font-weight: 700; color: #EF4444; margin-top: 8px;" id="stat-lost">0 min</div>
+                    </div>
+                    <div class="card" style="padding: 20px 24px; border-left: 4px solid #F59E0B;">
+                        <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Tasks Done</span>
+                        <div style="font-size: 2rem; font-weight: 700; color: #F59E0B; margin-top: 8px;" id="stat-tasks-done">0/0</div>
+                    </div>
+                </div>
+
+                <!-- Charts Row: Bar Chart + Pie Chart -->
+                <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 24px; margin-bottom: 28px;">
+                    <!-- Weekly Bar Chart -->
+                    <div class="card" style="padding: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <div>
+                                <h3 style="font-weight: 600; color: #1F2937; margin: 0;">Weekly Study Overview</h3>
+                                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 4px 0 0;">Planned vs Actual study time (minutes)</p>
+                            </div>
+                            <div style="display: flex; gap: 12px; font-size: 0.8rem;">
+                                <span style="display:flex; align-items:center; gap:4px;"><span style="width:12px; height:12px; border-radius:3px; background:rgba(99,102,241,0.3); display:inline-block;"></span> Planned</span>
+                                <span style="display:flex; align-items:center; gap:4px;"><span style="width:12px; height:12px; border-radius:3px; background:rgba(16,185,129,0.85); display:inline-block;"></span> Actual</span>
+                            </div>
+                        </div>
+                        <div style="height: 280px;">
+                            <canvas id="weeklyBarChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Monthly Pie Chart -->
+                    <div class="card" style="padding: 24px;">
+                        <div style="margin-bottom: 16px;">
+                            <h3 style="font-weight: 600; color: #1F2937; margin: 0;">Monthly Breakdown</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 4px 0 0;">Study time distribution by month</p>
+                        </div>
+                        <div style="height: 280px; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="monthlyPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Focus Score + Insights -->
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 28px;">
+                    <!-- Focus Score Card -->
+                    <div class="card" style="padding: 28px; background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #9333EA 100%); color: white; border: none; position: relative; overflow: hidden;">
+                        <div style="position: absolute; top: -20px; right: -20px; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.08);"></div>
+                        <div style="position: absolute; bottom: -30px; left: -30px; width: 100px; height: 100px; border-radius: 50%; background: rgba(255,255,255,0.05);"></div>
+                        <span style="font-size: 0.85rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px;">Focus Score</span>
+                        <div id="analytics-focus" style="font-size: 3rem; font-weight: 800; margin: 8px 0; position: relative;">-</div>
+                        <div style="height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; margin: 12px 0;">
+                            <div id="focus-progress-bar" style="height: 100%; width: 0%; background: white; border-radius: 3px; transition: width 0.8s ease;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 16px;">
+                            <div>
+                                <span style="font-size: 0.75rem; opacity: 0.7;">Consistency</span><br>
+                                <span id="analytics-consistency" style="font-weight: 700; font-size: 1.1rem;">-</span>
+                            </div>
+                            <div>
+                                <span style="font-size: 0.75rem; opacity: 0.7;">Streak</span><br>
+                                <span id="analytics-streak" style="font-weight: 700; font-size: 1.1rem;">0 days</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Insights Panel -->
+                    <div class="card" style="padding: 24px;">
+                        <h3 style="font-weight: 600; color: #1F2937; margin: 0 0 16px;">AI Insights &amp; Patterns</h3>
+                        <div id="analytics-insights" style="font-size: 0.9rem; color: #4B5563; line-height: 1.6;">
+                            <div style="padding: 16px; background: #F9FAFB; border-radius: 8px; color: var(--text-muted); text-align: center;">
+                                Complete some study sessions and reflections to unlock AI insights.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- REFLECTION TAB -->
+            <section id="view-reflection" class="view-section">
+                <div class="page-header">
+                    <div>
+                        <h1>Day Reflection</h1>
+                        <p>Journaling your progress maintains your streak.</p>
+                    </div>
+                </div>
+                <div class="card" style="max-width: 600px;">
+                    <form onsubmit="submitReflection(event)">
+                        <div style="margin-bottom: 16px;">
+                            <label class="input-label">What went well today?</label>
+                            <textarea id="ref-well" class="input-field" rows="2" required></textarea>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label class="input-label">What wasted your time?</label>
+                            <textarea id="ref-wasted" class="input-field" rows="2" required></textarea>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                            <div>
+                                <label class="input-label">How focused were you? (1-10)</label>
+                                <input type="number" id="ref-focus" class="input-field" min="1" max="10" required>
+                            </div>
+                            <div>
+                                <label class="input-label">Energy Level (1-10)</label>
+                                <input type="number" id="ref-energy" class="input-field" min="1" max="10" required>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                            <div>
+                                <label class="input-label">Mood</label>
+                                <select id="ref-mood" class="input-field" required>
+                                    <option value="Happy">Happy</option>
+                                    <option value="Neutral" selected>Neutral</option>
+                                    <option value="Stressed">Stressed</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="input-label">Biggest Distraction</label>
+                                <input type="text" id="ref-distraction" class="input-field" placeholder="e.g., Mobile usage">
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 24px;">
+                            <label class="input-label">Improvement for Tomorrow</label>
+                            <input type="text" id="ref-improvement" class="input-field" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Insights</button>
+                    </form>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Floating Focus Widget -->
+    <div id="focus-widget" style="display: none; position: fixed; bottom: 30px; right: 30px; width: 320px; background: var(--surface-color); border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid var(--border-color); z-index: 10000; overflow: hidden; font-family: 'Inter', sans-serif;">
+        <div id="fw-header" style="background: var(--primary-color); color: white; padding: 12px 16px; cursor: move; display: flex; justify-content: space-between; align-items: center; font-weight: 600;">
+            <span id="fw-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;">Task Title</span>
+            <span style="cursor: pointer; font-size: 1.2rem; line-height: 1;" onclick="closeFocusWidget()">&times;</span>
+        </div>
+        <div style="padding: 24px; text-align: center;">
+            <div id="fw-time" style="font-size: 3rem; font-weight: 800; color: #111827; font-variant-numeric: tabular-nums;">25:00</div>
+            <div style="margin-top: 16px; display: flex; gap: 8px; justify-content: center;">
+                <button id="fw-btn-play" class="btn btn-primary" onclick="toggleFocusTimer()">Start</button>
+                <button id="fw-btn-complete" class="btn btn-outline" style="color: var(--primary-color); border-color: var(--primary-color);" onclick="completeFocusTask()">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="edit-task-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:9999;">
+        <div style="background:white; padding:24px; border-radius:8px; width:400px; max-width:90%;">
+            <h3 style="margin-bottom:16px;">Edit Task</h3>
+            <form onsubmit="updateTask(event)">
+                <input type="hidden" id="edit-task-id">
+                <div style="margin-bottom:12px;">
+                    <label class="input-label">Title</label>
+                    <input type="text" id="edit-task-title" class="input-field" required>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label class="input-label">Deadline</label>
+                    <input type="date" id="edit-task-deadline" class="input-field" required>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label class="input-label">Priority</label>
+                    <select id="edit-task-priority" class="input-field">
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label class="input-label">Estimated Time (mins)</label>
+                    <input type="number" id="edit-task-time" class="input-field" required>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label class="input-label">Linked Material</label>
+                    <input type="text" id="edit-task-material" class="input-field" placeholder="Optional URL/Reference">
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px;">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('edit-task-modal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- ===== FULL-SCREEN DAILY SETUP OVERLAY ===== -->
+    <div id="daily-setup-overlay">
+        <div class="overlay-progress-bar">
+            <div class="fill" id="overlay-progress-fill" style="width: 25%;"></div>
+        </div>
+        <div class="overlay-card">
+            <button class="overlay-close-btn" id="overlay-close-btn" onclick="closeDailySetupOverlay()" title="Close">&times;</button>
+            
+            <div id="overlay-mode-badge" class="overlay-badge first-time">
+                🌅 First login today — let's plan your day
+            </div>
+
+            <div id="overlay-step-container">
+                <!-- STEP 1: Sleep Schedule -->
+                <div class="step active" id="p_step1">
+                    <h1>What are your typical sleeping hours?</h1>
+                    <p>We'll use this to ensure we don't schedule tasks when you should be resting.</p>
+                    <div style="display: flex; gap: 24px; margin-top: 24px;">
+                        <div style="flex: 1;"><label class="input-label">Wake up time</label><input type="time" id="p_wake" class="input-field" value="07:00"></div>
+                        <div style="flex: 1;"><label class="input-label">Sleep time</label><input type="time" id="p_sleep" class="input-field" value="23:00"></div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Fixed Commitments -->
+                <div class="step" id="p_step2">
+                    <h1>What fixed commitments do you have today?</h1>
+                    <p>Classes, coaching, part-time work — anything that's locked in.</p>
+                    <div style="display: flex; gap: 16px; margin-bottom: 8px;">
+                        <div style="flex: 2; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Commitment</div>
+                        <div style="flex: 1; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">From</div>
+                        <div style="flex: 1; font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">To</div>
+                        <div style="width: 24px;"></div>
+                    </div>
+                    <div id="p_commitments-container">
+                        <div class="commitment-row" id="p_row-0">
+                            <div class="col-name"><input type="text" class="input-field p_commit-name" placeholder="e.g., College"></div>
+                            <div class="col-time"><input type="time" class="input-field p_commit-from"></div>
+                            <div class="col-time"><input type="time" class="input-field p_commit-to"></div>
+                            <button class="remove-btn" onclick="document.getElementById('p_row-0').remove()">&times;</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-dashed" onclick="p_addCommitmentRow()" style="margin-top: 16px; border-radius: 8px; font-weight: 600;">+ Add another commitment</button>
+                </div>
+
+                <!-- STEP 3: Free Time Slots -->
+                <div class="step" id="p_step3">
+                    <h1>When are you free to study?</h1>
+                    <p>We will ONLY schedule your tasks during these time blocks today.</p>
+                    <div id="p_freeslots-container">
+                        <div class="freeslot-row" style="display: flex; gap: 16px; margin-bottom: 16px;" id="p_free-row-0">
+                            <div style="flex: 1;"><label class="input-label">Free From</label><input type="time" class="input-field p_free-from" value="16:00"></div>
+                            <div style="flex: 1;"><label class="input-label">Free Until</label><input type="time" class="input-field p_free-to" value="20:00"></div>
+                            <button class="remove-btn" onclick="document.getElementById('p_free-row-0').remove()">&times;</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-dashed" onclick="p_addFreeRow()" style="margin-top: 8px; border-radius: 8px; font-weight: 600;">+ Add another free slot</button>
+                </div>
+
+                <!-- STEP 4: Realistic Hours -->
+                <div class="step" id="p_step4">
+                    <h1>Let's be realistic.</h1>
+                    <p>How many hours can you actually study with full focus today without burning out?</p>
+                    <div><input type="number" id="p_studyHours" class="input-field" placeholder="e.g., 4" style="font-size: 2rem; padding: 20px; text-align: center;" min="1" max="12"></div>
+                </div>
+
+                <!-- Actions -->
+                <div class="bottom-actions">
+                    <button class="back-btn" onclick="p_prevStep()" id="p_btnBack" style="visibility: hidden;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                        Back
+                    </button>
+                    <button class="btn btn-primary" onclick="p_nextStep()" id="p_btnNext" style="padding: 12px 32px; font-size: 1.05rem; border-radius: 8px;">
+                        Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ======= CALENDAR REVIEW MODAL ======= -->
+    <div id="cal-review-modal" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); overflow-y:auto; padding:40px 20px;">
+        <div style="max-width:900px; margin:0 auto; background:white; border-radius:16px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.2); animation:qeSlideIn 0.35s ease;">
+            <!-- Header -->
+            <div id="cal-review-header" style="padding:24px 28px; background:linear-gradient(135deg,#EEF2FF 0%,#E0E7FF 50%,#F0F9FF 100%); border-bottom:1px solid #C7D2FE;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="margin:0; font-size:1.2rem; color:#1E40AF;">🔍 Review Extracted Events</h3>
+                        <p style="margin:4px 0 0; font-size:0.85rem; color:#6B7280;" id="cal-review-subtitle">AI has analyzed your document. Please review before saving.</p>
+                    </div>
+                    <button onclick="closeCalReview()" style="background:none; border:none; font-size:1.5rem; color:#6B7280; cursor:pointer;">×</button>
+                </div>
+                <!-- Confidence + Quality bar -->
+                <div id="cal-review-meta" style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;"></div>
+            </div>
+            <!-- AI Notes -->
+            <div id="cal-review-notes" style="display:none; padding:12px 28px; background:#FFFBEB; border-bottom:1px solid #FDE68A; font-size:0.85rem; color:#92400E;"></div>
+            <!-- Event Table -->
+            <div style="padding:24px 28px; max-height:55vh; overflow-y:auto;">
+                <table id="cal-review-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                    <thead>
+                        <tr style="background:#F9FAFB; border-bottom:2px solid #E5E7EB;">
+                            <th style="padding:10px 12px; text-align:left; font-weight:600; color:#374151;">Date</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600; color:#374151;">Event</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600; color:#374151;">Type</th>
+                            <th style="padding:10px 6px; text-align:center; font-weight:600; color:#374151; width:50px;">✕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cal-review-body"></tbody>
+                </table>
+            </div>
+            <!-- Footer Actions -->
+            <div style="padding:20px 28px; background:#F9FAFB; border-top:1px solid #E5E7EB; display:flex; justify-content:space-between; align-items:center;">
+                <span id="cal-review-count" style="font-size:0.9rem; color:#6B7280;"></span>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="closeCalReview()" class="btn btn-outline" style="padding:10px 20px;">Cancel</button>
+                    <button onclick="confirmCalEvents()" class="btn btn-primary" id="cal-confirm-btn" style="padding:10px 28px; font-size:0.95rem;">✓ Confirm & Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======= TIMETABLE REVIEW MODAL ======= -->
+    <div id="tt-review-modal" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); overflow-y:auto; padding:40px 20px;">
+        <div style="max-width:900px; margin:0 auto; background:white; border-radius:16px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.2); animation:qeSlideIn 0.35s ease;">
+            <div id="tt-review-header" style="padding:24px 28px; background:linear-gradient(135deg,#F0FDF4 0%,#ECFDF5 50%,#E0E7FF 100%); border-bottom:1px solid #BBF7D0;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="margin:0; font-size:1.2rem; color:#065F46;">📅 Review Extracted Timetable</h3>
+                        <p style="margin:4px 0 0; font-size:0.85rem; color:#6B7280;" id="tt-review-subtitle">AI has analyzed your timetable. Please review before saving.</p>
+                    </div>
+                    <button onclick="closeTTReview()" style="background:none; border:none; font-size:1.5rem; color:#6B7280; cursor:pointer;">×</button>
+                </div>
+                <div id="tt-review-meta" style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;"></div>
+            </div>
+            <div id="tt-review-notes" style="display:none; padding:12px 28px; background:#FFFBEB; border-bottom:1px solid #FDE68A; font-size:0.85rem; color:#92400E;"></div>
+            <div style="padding:24px 28px; max-height:55vh; overflow-y:auto;">
+                <table id="tt-review-table" style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                    <thead>
+                        <tr style="background:#F9FAFB; border-bottom:2px solid #E5E7EB;">
+                            <th style="padding:10px 12px; text-align:left; font-weight:600; color:#374151;">Day</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600; color:#374151;">Subject</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600; color:#374151;">Start</th>
+                            <th style="padding:10px 12px; text-align:left; font-weight:600; color:#374151;">End</th>
+                            <th style="padding:10px 6px; text-align:center; font-weight:600; color:#374151; width:50px;">✕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tt-review-body"></tbody>
+                </table>
+            </div>
+            <div style="padding:20px 28px; background:#F9FAFB; border-top:1px solid #E5E7EB; display:flex; justify-content:space-between; align-items:center;">
+                <span id="tt-review-count" style="font-size:0.9rem; color:#6B7280;"></span>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="closeTTReview()" class="btn btn-outline" style="padding:10px 20px;">Cancel</button>
+                    <button onclick="confirmTTClasses()" class="btn btn-primary" id="tt-confirm-btn" style="padding:10px 28px; font-size:0.95rem;">✓ Confirm & Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Review modal table rows */
+        #cal-review-table tbody tr,
+        #tt-review-table tbody tr {
+            border-bottom: 1px solid #F3F4F6;
+            transition: background 0.15s;
+        }
+        #cal-review-table tbody tr:hover,
+        #tt-review-table tbody tr:hover {
+            background: #F9FAFB;
+        }
+        #cal-review-table td, #tt-review-table td {
+            padding: 8px 12px;
+            vertical-align: middle;
+        }
+        #cal-review-table input, #tt-review-table input,
+        #cal-review-table select, #tt-review-table select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            background: white;
+            transition: border-color 0.2s;
+        }
+        #cal-review-table input:focus, #tt-review-table input:focus,
+        #cal-review-table select:focus, #tt-review-table select:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+        .review-delete-btn {
+            background: none; border: none; color: #EF4444; font-size: 1.1rem;
+            cursor: pointer; opacity: 0.5; transition: opacity 0.2s;
+        }
+        .review-delete-btn:hover { opacity: 1; }
+        .confidence-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px; border-radius: 16px;
+            font-size: 0.8rem; font-weight: 600;
+        }
+        .confidence-high { background: #D1FAE5; color: #065F46; }
+        .confidence-mid { background: #FEF3C7; color: #92400E; }
+        .confidence-low { background: #FEE2E2; color: #991B1B; }
+        .quality-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 12px; border-radius: 16px;
+            font-size: 0.8rem; font-weight: 600;
+        }
+    </style>
+
+    <!-- Chat backdrop -->
+    <div id="cal-chat-backdrop" class="cal-chat-backdrop" onclick="toggleCalendarChat()"></div>
+
+    <script>
+        window.USER_DATA = {{ user | tojson | safe }};
+    </script>
+    <script src="/static/script.js"></script>
+</body>
+</html>
+

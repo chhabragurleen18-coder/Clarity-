@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarity | See Your Academic Path Clearly</title>
+    <meta name="description" content="Clarity helps you see your academic workload clearly. Detect patterns, redistribute your workload, and build sustainable study habits.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* ─── PAGE RESET ─── */
+        body {
+            background-color: var(--bg-color);
+            overflow-x: hidden;
+        }
+
+        /* ─── NAVBAR ─── */
+        .cl-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 48px;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .cl-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--text-main);
+        }
+        .cl-logo-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .cl-logo-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2;
+        }
+        .cl-nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+        .cl-nav-link {
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+        .cl-nav-link:hover {
+            color: var(--text-main);
+        }
+        .cl-nav-cta {
+            padding: 10px 24px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .cl-nav-cta:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(137,194,217,0.35);
+        }
+
+        /* ─── HERO SECTION ─── */
+        .cl-hero {
+            padding: 140px 24px 80px;
+            text-align: center;
+            background: linear-gradient(180deg, #FFFFFF 0%, #EDF7FC 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .cl-hero::after {
+            content: '';
+            position: absolute;
+            bottom: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 120px;
+            background: radial-gradient(ellipse, rgba(137,194,217,0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .cl-hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            background: var(--primary-light);
+            border: 1px solid #B8DFF0;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--primary-hover);
+            margin-bottom: 32px;
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        .cl-hero-badge-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid var(--primary-hover);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .cl-hero h1 {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--text-main);
+            margin-bottom: 24px;
+            letter-spacing: -0.03em;
+            animation: fadeInUp 0.6s ease-out 0.1s forwards;
+            opacity: 0;
+        }
+        .cl-hero h1 .cl-accent {
+            color: var(--primary-color);
+            display: block;
+        }
+        .cl-hero-sub {
+            font-size: 1.15rem;
+            max-width: 560px;
+            margin: 0 auto 40px;
+            color: var(--text-muted);
+            font-weight: 400;
+            line-height: 1.7;
+            animation: fadeInUp 0.6s ease-out 0.2s forwards;
+            opacity: 0;
+        }
+        .cl-hero-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 64px;
+            animation: fadeInUp 0.6s ease-out 0.3s forwards;
+            opacity: 0;
+        }
+        .cl-btn-primary {
+            padding: 14px 36px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 1.05rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cl-btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(137,194,217,0.35);
+        }
+        .cl-btn-outline {
+            padding: 14px 36px;
+            background: white;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 1.05rem;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .cl-btn-outline:hover {
+            border-color: #9CA3AF;
+            background: var(--bg-color);
+            transform: translateY(-2px);
+        }
+
+        /* Stats Row */
+        .cl-stats-row {
+            display: flex;
+            justify-content: center;
+            gap: 80px;
+            animation: fadeInUp 0.6s ease-out 0.4s forwards;
+            opacity: 0;
+        }
+        .cl-stat {
+            text-align: center;
+        }
+        .cl-stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+        }
+        .cl-stat-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        /* ─── SOUND FAMILIAR SECTION ─── */
+        .cl-familiar {
+            padding: 100px 48px;
+            background: var(--surface-color);
+        }
+        .cl-familiar-header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+        .cl-familiar-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 16px;
+        }
+        .cl-familiar-header p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 560px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+        .cl-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 48px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .cl-col-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 20px;
+        }
+        .cl-col-title .icon-x {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #FEE2E2;
+            color: #EF4444;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .cl-col-title .icon-check {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #D1FAE5;
+            color: #059669;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .cl-problem-item, .cl-solution-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px 20px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        .cl-problem-item {
+            background: #FFF5F5;
+            border: 1px solid #FEE2E2;
+            color: #991B1B;
+        }
+        .cl-problem-item .item-icon {
+            color: #EF4444;
+            font-weight: 700;
+            font-size: 1rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .cl-solution-item {
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+            color: #065F46;
+        }
+        .cl-solution-item .item-icon {
+            color: #059669;
+            font-weight: 700;
+            font-size: 1rem;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* ─── FEATURES SECTION ─── */
+        .cl-features {
+            padding: 100px 48px;
+            background: var(--bg-color);
+        }
+        .cl-features-header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+        .cl-features-header h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 16px;
+        }
+        .cl-features-header p {
+            font-size: 1.1rem;
+            color: var(--primary-color);
+            max-width: 560px;
+            margin: 0 auto;
+            line-height: 1.7;
+            font-weight: 500;
+        }
+        .cl-features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .cl-feature-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 32px 28px;
+            transition: all 0.3s;
+        }
+        .cl-feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: #D1D5DB;
+        }
+        .cl-feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        .cl-feature-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 10px;
+        }
+        .cl-feature-card p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* ─── BOTTOM CTA SECTION ─── */
+        .cl-bottom-cta {
+            padding: 100px 48px;
+            background: var(--surface-color);
+        }
+        .cl-bottom-cta-inner {
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: center;
+            background: linear-gradient(135deg, #EDF7FC 0%, #F5F5F5 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 64px 48px;
+            position: relative;
+        }
+        .cl-bottom-cta-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-sm);
+            background: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+        .cl-bottom-cta-inner h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 16px;
+        }
+        .cl-bottom-cta-inner p.cl-cta-desc {
+            font-size: 1.05rem;
+            color: var(--text-muted);
+            max-width: 480px;
+            margin: 0 auto 32px;
+            line-height: 1.7;
+        }
+        .cl-bottom-cta-inner .cl-cta-fine {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 20px;
+        }
+
+        /* ─── FOOTER ─── */
+        .cl-footer {
+            padding: 48px 48px;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            background: var(--surface-color);
+        }
+        .cl-footer p {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        /* ─── ANIMATIONS ─── */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 768px) {
+            .cl-navbar { padding: 14px 20px; }
+            .cl-nav-links { gap: 16px; }
+            .cl-hero h1 { font-size: 2.5rem; }
+            .cl-hero-sub { font-size: 1rem; }
+            .cl-stats-row { flex-direction: column; gap: 32px; }
+            .cl-columns { grid-template-columns: 1fr; }
+            .cl-features-grid { grid-template-columns: 1fr; }
+            .cl-hero-actions { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ═══════════════ NAVBAR ═══════════════ -->
+    <nav class="cl-navbar" id="cl-navbar">
+        <div class="cl-logo">
+            <div class="cl-logo-icon">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                </svg>
+            </div>
+            Clarity
+        </div>
+        <div class="cl-nav-links">
+            <a href="#features" class="cl-nav-link">Features</a>
+            <a href="#how-it-works" class="cl-nav-link">How It Works</a>
+            <a href="/login" class="cl-nav-cta">Get Started</a>
+        </div>
+    </nav>
+
+    <!-- ═══════════════ HERO ═══════════════ -->
+    <section class="cl-hero">
+        <div class="cl-hero-badge">
+            <span class="cl-hero-badge-icon">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"></circle></svg>
+            </span>
+            See Your Academic Path Clearly
+        </div>
+
+        <h1>
+            Stop Missing Deadlines.<br>
+            <span class="cl-accent">Start Thriving.</span>
+        </h1>
+
+        <p class="cl-hero-sub">
+            Clarity helps you see your academic workload clearly. We detect patterns, redistribute your workload, and help you build sustainable study habits.
+        </p>
+
+        <div class="cl-hero-actions">
+            <a href="/login" class="cl-btn-primary">Get Started with Clarity →</a>
+            <a href="#how-it-works" class="cl-btn-outline">See How It Works</a>
+        </div>
+
+        <div class="cl-stats-row">
+            <div class="cl-stat">
+                <div class="cl-stat-value">87%</div>
+                <div class="cl-stat-label">Less Missed Deadlines</div>
+            </div>
+            <div class="cl-stat">
+                <div class="cl-stat-value">3.2x</div>
+                <div class="cl-stat-label">Better Time Estimation</div>
+            </div>
+            <div class="cl-stat">
+                <div class="cl-stat-value">40%</div>
+                <div class="cl-stat-label">Reduced Stress</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ SOUND FAMILIAR? ═══════════════ -->
+    <section class="cl-familiar" id="how-it-works">
+        <div class="cl-familiar-header">
+            <h2>Sound Familiar?</h2>
+            <p>Most students don't fail because they're lazy. They fail because they can't see the storm coming until they're drowning in it.</p>
+        </div>
+
+        <div class="cl-columns">
+            <!-- THE PROBLEM -->
+            <div>
+                <div class="cl-col-title">
+                    <span class="icon-x">✕</span>
+                    The Problem
+                </div>
+                <div class="cl-problem-item">
+                    <span class="item-icon">✕</span>
+                    <span>Can't visualize your actual workload until it's too late</span>
+                </div>
+                <div class="cl-problem-item">
+                    <span class="item-icon">✕</span>
+                    <span>Consistently misjudge how long tasks will take</span>
+                </div>
+                <div class="cl-problem-item">
+                    <span class="item-icon">✕</span>
+                    <span>Forget about assignments until the deadline is tomorrow</span>
+                </div>
+                <div class="cl-problem-item">
+                    <span class="item-icon">✕</span>
+                    <span>Start strong but lose momentum mid-semester</span>
+                </div>
+            </div>
+
+            <!-- OUR SOLUTION -->
+            <div>
+                <div class="cl-col-title">
+                    <span class="icon-check">✓</span>
+                    Our Solution
+                </div>
+                <div class="cl-solution-item">
+                    <span class="item-icon">✓</span>
+                    <span>See your entire workload at a glance with risk indicators</span>
+                </div>
+                <div class="cl-solution-item">
+                    <span class="item-icon">✓</span>
+                    <span>AI learns your patterns and suggests realistic time estimates</span>
+                </div>
+                <div class="cl-solution-item">
+                    <span class="item-icon">✓</span>
+                    <span>Smart reminders that adapt to your schedule and energy</span>
+                </div>
+                <div class="cl-solution-item">
+                    <span class="item-icon">✓</span>
+                    <span>Consistency tracking that catches drop-offs early</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ FEATURES ═══════════════ -->
+    <section class="cl-features" id="features">
+        <div class="cl-features-header">
+            <h2>Everything You Need</h2>
+            <p>Built specifically for students who want to work smarter, not harder. Achieve clarity in your academic life.</p>
+        </div>
+
+        <div class="cl-features-grid">
+            <!-- Card 1 -->
+            <div class="cl-feature-card">
+                <div class="cl-feature-icon" style="background: var(--primary-light);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                </div>
+                <h3>Smart Timetable Generator</h3>
+                <p>AI creates personalized daily and weekly schedules that respect your deadlines, energy levels, and natural breaks.</p>
+            </div>
+            <!-- Card 2 -->
+            <div class="cl-feature-card">
+                <div class="cl-feature-icon" style="background: #FEF3C7;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <h3>Delay & Decay Detection</h3>
+                <p>Automatically detect missed tasks, repeated postponements, and suggest workload redistribution before you crash.</p>
+            </div>
+            <!-- Card 3 -->
+            <div class="cl-feature-card">
+                <div class="cl-feature-icon" style="background: var(--primary-light);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <h3>Habit & Task Tracker</h3>
+                <p>Built-in timer, completion tracking, and consistency streaks to help you understand your actual work patterns.</p>
+            </div>
+            <!-- Card 4 -->
+            <div class="cl-feature-card">
+                <div class="cl-feature-icon" style="background: #FEE2E2;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                </div>
+                <h3>Drop-off Detector</h3>
+                <p>Identify where your time disappears, which tasks you abandon, and your low-energy failure zones.</p>
+            </div>
+            <!-- Card 5 -->
+            <div class="cl-feature-card">
+                <div class="cl-feature-icon" style="background: #D1FAE5;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
+                <h3>Skill Decay Prevention</h3>
+                <p>Get warned when you haven't practiced a subject in too long, with automatic revision slot suggestions.</p>
+            </div>
+            <!-- Card 6 -->
+            <div class="cl-feature-card">
+                <div class="cl-feature-icon" style="background: #EDE9FE;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                </div>
+                <h3>Workload Insights</h3>
+                <p>Visual dashboards showing your risk levels, productivity patterns, and areas needing attention.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════ BOTTOM CTA ═══════════════ -->
+    <section class="cl-bottom-cta">
+        <div class="cl-bottom-cta-inner">
+            <div class="cl-bottom-cta-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                </svg>
+            </div>
+            <h2>Ready to See Clearly?</h2>
+            <p class="cl-cta-desc">Stop guessing. Start knowing. Clarity helps you see your workload clearly and build sustainable study habits.</p>
+            <a href="/login" class="cl-btn-primary">Get Started with Clarity →</a>
+            <p class="cl-cta-fine">Free to use • No credit card required • Start in 30 seconds</p>
+        </div>
+    </section>
+
+    <!-- ═══════════════ FOOTER ═══════════════ -->
+    <footer class="cl-footer">
+        <div class="cl-logo" style="justify-content: center; margin-bottom: 12px;">
+            <div class="cl-logo-icon">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"></path>
+                </svg>
+            </div>
+            Clarity
+        </div>
+        <p>Empowering students to achieve without the burnout.</p>
+    </footer>
+
+</body>
+</html>

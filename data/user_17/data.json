@@ -1,0 +1,25 @@
+{
+    "user": {
+        "wake": "07:00",
+        "sleep": "23:00",
+        "commitments": [],
+        "target_study_hours": 4,
+        "streak": 0,
+        "score": 0,
+        "onboarded": true,
+        "free_slots": [
+            {
+                "from": "16:00",
+                "to": "20:00"
+            }
+        ],
+        "last_plan_date": "2026-04-06"
+    },
+    "tasks": [],
+    "calendar_events": [],
+    "weekly_timetable": [],
+    "timetable": [],
+    "reflections": [],
+    "focus_sessions": [],
+    "notified_events": []
+}
